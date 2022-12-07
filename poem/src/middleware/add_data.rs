@@ -1,6 +1,54 @@
 use crate::{Endpoint, Middleware, Request, Result};
 
-/// Middleware for add any data to request.
+/// Middleware that enables data to be available on all request handlers where specified.
+/// Useful for sharing database connection pools, data structures, etc, between handlers.
+///
+///
+/// ### Example Usage
+/// ```
+/// use std::{
+///     collections::HashMap,
+///     sync::{Arc, Mutex},
+/// };
+/// use poem::{
+/// get, handler, listener::TcpListener, middleware::{AddData, Tracing}, web::{Path, Data}, EndpointExt, Route, Server,
+/// };
+///
+/// struct AppState {
+///     clients: Mutex<HashMap<String, String>>,
+/// }
+///
+/// #[handler]
+/// fn hello(Path(name): Path<String>, state: Data<&Arc<AppState>>) -> String {
+///     let mut store = state.clients.lock().unwrap();
+///     store.insert(name.to_string(), "some state object".to_string());
+///     "store updated".to_string()
+/// }
+///
+/// #[tokio::main]
+/// async fn main() -> Result<(), std::io::Error> {
+///     
+///     let state = Arc::new(AppState {
+///         clients: Mutex::new(HashMap::new()),
+///     });
+///
+///     let app = Route::new()
+///         .at("/hello/:name", get(hello))
+///         .with(AddData::new(state))
+///         .with(Tracing);
+///
+///     Server::new(TcpListener::bind("127.0.0.1:3000"))
+///     .name("hello-world")
+///     .run(app)
+///     .await
+/// }
+///
+/// ```
+/// ### Further Examples
+///
+/// - https://github.com/poem-web/poem/tree/master/examples/poem/mongodb
+///
+///
 pub struct AddData<T> {
     value: T,
 }
